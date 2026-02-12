@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { nanoid } from 'nanoid'
+import { translateTextWithRetry } from '@/lib/gemini/translate'
 
 export async function createConversation(formData: FormData) {
   const supabase = await createClient()
@@ -278,7 +279,41 @@ export async function sendMessage(conversationId: string, text: string) {
     return { error: 'Not authorized' }
   }
 
-  // Insert message
+  // Get conversation details to determine language pair
+  const { data: conversation } = await supabase
+    .from('conversations')
+    .select('doctor_language, patient_language')
+    .eq('id', conversationId)
+    .single()
+
+  if (!conversation) {
+    return { error: 'Conversation not found' }
+  }
+
+  // Determine source and target languages based on sender role
+  const sourceLanguage = participant.role === 'doctor' 
+    ? conversation.doctor_language 
+    : conversation.patient_language
+  
+  const targetLanguage = participant.role === 'doctor'
+    ? conversation.patient_language
+    : conversation.doctor_language
+
+  // Translate the message
+  console.log(`Translating from ${sourceLanguage} to ${targetLanguage}:`, text)
+  const { translation, error: translationError } = await translateTextWithRetry(
+    text,
+    sourceLanguage,
+    targetLanguage
+  )
+
+  if (translationError) {
+    console.warn('Translation warning:', translationError)
+  }
+
+  console.log('Translation result:', translation)
+
+  // Insert message with translation
   const { data: message, error } = await supabase
     .from('messages')
     .insert({
@@ -286,7 +321,7 @@ export async function sendMessage(conversationId: string, text: string) {
       sender_id: user.id,
       sender_role: participant.role,
       original_text: text,
-      translated_text: null, // Will be filled by translation service later
+      translated_text: translation,
     })
     .select()
     .single()
@@ -306,7 +341,7 @@ export async function deleteConversation(conversationId: string) {
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) {
-    return { error: 'Not authenticated' }
+    redirect('/auth/login')
   }
 
   // Check if user is the creator
@@ -317,7 +352,7 @@ export async function deleteConversation(conversationId: string) {
     .single()
 
   if (!conversation || conversation.creator_id !== user.id) {
-    return { error: 'Not authorized to delete this conversation' }
+    redirect('/conversations')
   }
 
   const { error } = await supabase
@@ -327,7 +362,8 @@ export async function deleteConversation(conversationId: string) {
 
   if (error) {
     console.error('Delete error:', error)
-    return { error: 'Failed to delete conversation' }
+    // Redirect anyway on error
+    redirect('/conversations')
   }
 
   revalidatePath('/conversations')

@@ -41,6 +41,9 @@ export default async function ConversationDetailPage({
   // Fetch messages
   const { messages } = await getMessages(params.id)
 
+  // Create delete action bound to this conversation
+  const deleteAction = deleteConversation.bind(null, params.id)
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow">
@@ -67,7 +70,7 @@ export default async function ConversationDetailPage({
               </div>
               
               {isCreator && (
-                <form action={deleteConversation.bind(null, params.id)}>
+                <form action={deleteAction}>
                   <Button type="submit" variant="destructive" size="sm">
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete

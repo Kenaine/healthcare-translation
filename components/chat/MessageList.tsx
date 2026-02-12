@@ -30,8 +30,11 @@ export default function MessageList({ messages, currentUserId, currentUserRole }
     <div className="flex-1 overflow-y-auto p-4 space-y-4">
       {messages.map((message) => {
         const isOwnMessage = message.sender_id === currentUserId
-        const displayText = message.original_text || ''
-        const translatedText = message.translated_text
+        const isSameRole = message.sender_role === currentUserRole
+        
+        // Always show original text first, translation second
+        const primaryText = message.original_text
+        const secondaryText = message.translated_text
 
         return (
           <div
@@ -51,14 +54,19 @@ export default function MessageList({ messages, currentUserId, currentUserRole }
                 {message.sender_role === 'doctor' ? '👨‍⚕️ Doctor' : '🧑 Patient'}
               </div>
 
-              {/* Original message */}
-              <div className="text-sm">{displayText}</div>
+              {/* Primary text (always original) */}
+              {isOwnMessage && <div className="text-xs opacity-70 mb-1">Original:</div>}
+              <div className="text-sm whitespace-pre-wrap">{primaryText}</div>
 
-              {/* Translation if available and different from original */}
-              {translatedText && translatedText !== displayText && (
+              {/* Secondary text (always translation) - show if available and different */}
+              {secondaryText && secondaryText !== primaryText && (
                 <div className="mt-2 pt-2 border-t border-current/20">
-                  <div className="text-xs opacity-70 mb-1">Translation:</div>
-                  <div className="text-sm italic">{translatedText}</div>
+                  <div className="text-xs opacity-70 mb-1">
+                    {isOwnMessage ? 'Translated to:' : 'Translation:'}
+                  </div>
+                  <div className="text-sm opacity-80 italic whitespace-pre-wrap">
+                    {secondaryText}
+                  </div>
                 </div>
               )}
             </div>
