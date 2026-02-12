@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { joinConversation } from '@/lib/conversations/actions'
 import { createClient } from '@/lib/supabase/client'
 
-export default function JoinPage() {
+function JoinPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const conversationId = searchParams.get('c')
@@ -137,5 +137,21 @@ export default function JoinPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function JoinPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6">
+            <div className="text-center">Loading...</div>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <JoinPageContent />
+    </Suspense>
   )
 }
