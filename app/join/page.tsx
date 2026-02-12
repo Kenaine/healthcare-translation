@@ -8,6 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { joinConversation } from '@/lib/conversations/actions'
 import { createClient } from '@/lib/supabase/client'
 
+// Force dynamic rendering to avoid static generation issues with useSearchParams
+export const dynamic = 'force-dynamic'
+
 function JoinPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
