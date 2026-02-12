@@ -76,7 +76,7 @@ export default function NewConversationPage() {
               <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded">
                 <p className="text-sm font-medium">Language Setup</p>
                 <p className="text-sm mt-1">
-                  Your preferred language from your profile will be used. The patient's language will be set when they join the conversation.
+                  Your preferred language from your profile will be used. The patient&apos;s language will be set when they join the conversation.
                 </p>
               </div>
 

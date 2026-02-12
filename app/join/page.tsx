@@ -127,7 +127,7 @@ export default function JoinPage() {
           
           <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded">
             <p className="text-sm">
-              You're joining as: <span className="font-semibold">{user.user_metadata.full_name || user.email}</span>
+              You&apos;re joining as: <span className="font-semibold">{user.user_metadata.full_name || user.email}</span>
             </p>
           </div>
 

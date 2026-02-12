@@ -32,7 +32,7 @@ export default function SearchResults({ results, query, onJump }: SearchResultsP
     return (
       <div className="text-center py-12 text-muted-foreground">
         <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
-        <p>No messages found for "{query}"</p>
+        <p>No messages found for &quot;{query}&quot;</p>
       </div>
     )
   }

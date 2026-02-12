@@ -155,7 +155,7 @@ export default function SearchPage() {
         {query && conversations.length === 0 && !isPending && (
           <div className="bg-white rounded-lg shadow-sm p-12 text-center">
             <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">No conversations found for "{query}"</p>
+            <p className="text-muted-foreground">No conversations found for &quot;{query}&quot;</p>
           </div>
         )}
       </div>
