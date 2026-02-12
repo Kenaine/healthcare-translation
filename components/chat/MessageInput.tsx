@@ -3,13 +3,15 @@
 import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Send } from 'lucide-react'
+import AudioRecorder from '@/components/audio/AudioRecorder'
 
 type MessageInputProps = {
   conversationId: string
   onSendMessage: (text: string) => Promise<void>
+  onSendAudio: (audioBlob: Blob) => Promise<void>
 }
 
-export default function MessageInput({ conversationId, onSendMessage }: MessageInputProps) {
+export default function MessageInput({ conversationId, onSendMessage, onSendAudio }: MessageInputProps) {
   const [message, setMessage] = useState('')
   const [isPending, startTransition] = useTransition()
 
@@ -26,9 +28,19 @@ export default function MessageInput({ conversationId, onSendMessage }: MessageI
     })
   }
 
+  const handleAudioRecording = async (audioBlob: Blob) => {
+    startTransition(async () => {
+      await onSendAudio(audioBlob)
+    })
+  }
+
   return (
     <form onSubmit={handleSubmit} className="border-t p-4">
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-center">
+        <AudioRecorder 
+          onRecordingComplete={handleAudioRecording} 
+          disabled={isPending}
+        />
         <input
           type="text"
           value={message}

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { sendMessage } from '@/lib/conversations/actions'
+import { sendMessage, sendAudioMessage } from '@/lib/conversations/actions'
 import MessageList from '@/components/chat/MessageList'
 import MessageInput from '@/components/chat/MessageInput'
 import { Card, CardContent } from '@/components/ui/card'
@@ -13,6 +13,7 @@ type Message = {
   sender_role: 'doctor' | 'patient'
   original_text: string | null
   translated_text: string | null
+  audio_url: string | null
   created_at: string
 }
 
@@ -120,6 +121,7 @@ export default function ChatInterface({
       sender_role: currentUserRole,
       original_text: text,
       translated_text: null,
+      audio_url: null,
       created_at: new Date().toISOString(),
     }
 
@@ -148,6 +150,18 @@ export default function ChatInterface({
     }
   }
 
+  const handleSendAudio = async (audioBlob: Blob) => {
+    console.log('Sending audio message...')
+    
+    const result = await sendAudioMessage(conversationId, audioBlob)
+    
+    if (result.error) {
+      console.error('Failed to send audio message:', result.error)
+      alert('Failed to send audio message')
+    }
+    // Real-time subscription will add the message to the list
+  }
+
   return (
     <Card className="h-[600px] flex flex-col">
       <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
@@ -160,6 +174,7 @@ export default function ChatInterface({
         <MessageInput
           conversationId={conversationId}
           onSendMessage={handleSendMessage}
+          onSendAudio={handleSendAudio}
         />
       </CardContent>
     </Card>

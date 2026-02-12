@@ -335,6 +335,71 @@ export async function sendMessage(conversationId: string, text: string) {
   return { success: true, message }
 }
 
+export async function sendAudioMessage(conversationId: string, audioBlob: Blob) {
+  const supabase = await createClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) {
+    return { error: 'Not authenticated' }
+  }
+
+  // Check if user is participant
+  const { data: participant } = await supabase
+    .from('conversation_participants')
+    .select('role')
+    .eq('conversation_id', conversationId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (!participant) {
+    return { error: 'Not authorized' }
+  }
+
+  // Generate unique filename
+  const fileName = `${conversationId}/${nanoid()}.webm`
+  
+  // Upload audio to Supabase Storage
+  const { data: uploadData, error: uploadError } = await supabase.storage
+    .from('audio-messages')
+    .upload(fileName, audioBlob, {
+      contentType: 'audio/webm',
+      upsert: false
+    })
+
+  if (uploadError) {
+    console.error('Error uploading audio:', uploadError)
+    return { error: 'Failed to upload audio' }
+  }
+
+  // Get public URL
+  const { data: { publicUrl } } = supabase.storage
+    .from('audio-messages')
+    .getPublicUrl(fileName)
+
+  // Insert message with audio URL
+  const { data: message, error } = await supabase
+    .from('messages')
+    .insert({
+      conversation_id: conversationId,
+      sender_id: user.id,
+      sender_role: participant.role,
+      original_text: '[Audio Message]',
+      translated_text: '[Audio Message]',
+      audio_url: publicUrl,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error sending audio message:', error)
+    return { error: 'Failed to send audio message' }
+  }
+
+  revalidatePath(`/conversations/${conversationId}`)
+  return { success: true, message }
+}
+
 export async function deleteConversation(conversationId: string) {
   const supabase = await createClient()
   
