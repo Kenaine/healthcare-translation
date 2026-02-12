@@ -508,3 +508,132 @@ export async function searchMessages(query: string, conversationId?: string) {
 
   return { results: results || [] }
 }
+
+/**
+ * Generate AI summary for a conversation
+ */
+export async function generateSummary(conversationId: string) {
+  'use server'
+
+  const supabase = await createClient()
+
+  // Get current user
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { summary: null, error: 'Unauthorized' }
+  }
+
+  // Check if user is a participant
+  const { data: participant } = await supabase
+    .from('conversation_participants')
+    .select('role')
+    .eq('conversation_id', conversationId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (!participant) {
+    return { summary: null, error: 'Not a participant in this conversation' }
+  }
+
+  // Only doctors can generate summaries
+  if (participant.role !== 'doctor') {
+    return { summary: null, error: 'Only doctors can generate summaries' }
+  }
+
+  try {
+    // Get all messages in the conversation
+    const { data: messages, error: messagesError } = await supabase
+      .from('messages')
+      .select('sender_role, original_text, translated_text, created_at')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true })
+
+    if (messagesError || !messages || messages.length === 0) {
+      return { summary: null, error: 'No messages found in conversation' }
+    }
+
+    // Import summarize function dynamically to avoid build issues
+    const { generateMedicalSummaryWithRetry } = await import('@/lib/gemini/summarize')
+
+    // Generate summary using Gemini API
+    const summaryData = await generateMedicalSummaryWithRetry(messages)
+
+    // Save summary to database
+    const { data: summary, error: saveError } = await supabase
+      .from('summaries')
+      .insert({
+        conversation_id: conversationId,
+        generated_by: user.id,
+        overall_summary: summaryData.overall_summary,
+        symptoms: summaryData.symptoms,
+        diagnoses: summaryData.diagnoses,
+        medications: summaryData.medications,
+        allergies: summaryData.allergies,
+        follow_up_actions: summaryData.follow_up_actions,
+        patient_concerns: summaryData.patient_concerns,
+        doctor_recommendations: summaryData.doctor_recommendations,
+      })
+      .select()
+      .single()
+
+    if (saveError) {
+      console.error('Error saving summary:', saveError)
+      return { summary: null, error: 'Failed to save summary' }
+    }
+
+    return { summary, error: null }
+  } catch (error) {
+    console.error('Error generating summary:', error)
+    return { summary: null, error: 'Failed to generate summary' }
+  }
+}
+
+/**
+ * Get latest summary for a conversation
+ */
+export async function getLatestSummary(conversationId: string) {
+  'use server'
+
+  const supabase = await createClient()
+
+  // Get current user
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { summary: null, error: 'Unauthorized' }
+  }
+
+  // Check if user is a participant
+  const { data: participant } = await supabase
+    .from('conversation_participants')
+    .select('id')
+    .eq('conversation_id', conversationId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (!participant) {
+    return { summary: null, error: 'Not a participant in this conversation' }
+  }
+
+  // Get latest summary
+  const { data: summary, error } = await supabase
+    .from('summaries')
+    .select('*')
+    .eq('conversation_id', conversationId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (error && error.code !== 'PGRST116') {
+    // PGRST116 is "no rows returned" which is not an error
+    console.error('Error fetching summary:', error)
+    return { summary: null, error: 'Failed to fetch summary' }
+  }
+
+  return { summary: summary || null, error: null }
+}

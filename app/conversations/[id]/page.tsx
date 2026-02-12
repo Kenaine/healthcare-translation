@@ -7,13 +7,15 @@ import { Card, CardContent } from '@/components/ui/card'
 import { ShareLink } from '@/components/conversations/ShareLink'
 import ChatInterface from '@/components/chat/ChatInterface'
 import ParticipantsList from '@/components/conversations/ParticipantsList'
+import SummaryModal from '@/components/summary/SummaryModal'
 import { ArrowLeft, Trash2, Users } from 'lucide-react'
 
 export default async function ConversationDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id } = await params
   const supabase = await createClient()
   
   const { data: { user } } = await supabase.auth.getUser()
@@ -22,7 +24,7 @@ export default async function ConversationDetailPage({
     redirect('/auth/login')
   }
 
-  const { conversation, userRole, error } = await getConversation(params.id)
+  const { conversation, userRole, error } = await getConversation(id)
 
   if (error || !conversation) {
     redirect('/conversations')
@@ -39,10 +41,10 @@ export default async function ConversationDetailPage({
   const participants = conversation.conversation_participants || []
 
   // Fetch messages
-  const { messages } = await getMessages(params.id)
+  const { messages } = await getMessages(id)
 
   // Create delete action bound to this conversation
-  const deleteAction = deleteConversation.bind(null, params.id)
+  const deleteAction = deleteConversation.bind(null, id)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -69,6 +71,10 @@ export default async function ConversationDetailPage({
                 {participants.length} participant{participants.length !== 1 ? 's' : ''}
               </div>
               
+              {isDoctor && (
+                <SummaryModal conversationId={id} isDoctor={isDoctor} />
+              )}
+              
               {isCreator && (
                 <form action={deleteAction}>
                   <Button type="submit" variant="destructive" size="sm">
@@ -87,7 +93,7 @@ export default async function ConversationDetailPage({
           {/* Main Chat Area */}
           <div className="lg:col-span-2">
             <ChatInterface
-              conversationId={params.id}
+              conversationId={id}
               initialMessages={messages}
               currentUserId={user.id}
               currentUserRole={userRole as 'doctor' | 'patient'}
@@ -97,11 +103,11 @@ export default async function ConversationDetailPage({
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Share Link (only for doctors/creators) */}
-            {isDoctor && <ShareLink conversationId={params.id} />}
+            {isDoctor && <ShareLink conversationId={id} />}
 
             {/* Participants */}
             <ParticipantsList
-              conversationId={params.id}
+              conversationId={id}
               initialParticipants={participants}
               currentUserId={user.id}
               isDoctor={isDoctor}
