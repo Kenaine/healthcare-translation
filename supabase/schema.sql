@@ -50,14 +50,9 @@ CREATE TABLE IF NOT EXISTS public.guest_sessions (
 CREATE TABLE IF NOT EXISTS public.conversation_participants (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     conversation_id UUID REFERENCES public.conversations(id) ON DELETE CASCADE NOT NULL,
-    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-    guest_session_id UUID REFERENCES public.guest_sessions(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     role TEXT CHECK (role IN ('doctor', 'patient')) NOT NULL,
-    joined_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-    CONSTRAINT user_or_guest_check CHECK (
-        (user_id IS NOT NULL AND guest_session_id IS NULL) OR
-        (user_id IS NULL AND guest_session_id IS NOT NULL)
-    )
+    joined_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
 -- MESSAGES TABLE
@@ -167,27 +162,6 @@ CREATE POLICY "Creators can delete their conversations"
     ON public.conversations FOR DELETE
     USING (creator_id = auth.uid());
 
--- Guest sessions policies
-CREATE POLICY "Conversation creators can view guest sessions"
-    ON public.guest_sessions FOR SELECT
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.conversations
-            WHERE id = conversation_id
-            AND creator_id = auth.uid()
-        )
-    );
-
-CREATE POLICY "Conversation creators can create guest sessions"
-    ON public.guest_sessions FOR INSERT
-    WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM public.conversations
-            WHERE id = conversation_id
-            AND creator_id = auth.uid()
-        )
-    );
-
 -- Conversation participants policies
 CREATE POLICY "Users can view participants in their conversations"
     ON public.conversation_participants FOR SELECT
@@ -217,10 +191,7 @@ CREATE POLICY "Participants can view messages in their conversations"
         EXISTS (
             SELECT 1 FROM public.conversation_participants
             WHERE conversation_id = messages.conversation_id
-            AND (
-                user_id = auth.uid() OR
-                guest_session_id::text = sender_id
-            )
+            AND user_id = auth.uid()
         )
     );
 
@@ -230,10 +201,7 @@ CREATE POLICY "Participants can send messages in their conversations"
         EXISTS (
             SELECT 1 FROM public.conversation_participants
             WHERE conversation_id = messages.conversation_id
-            AND (
-                user_id = auth.uid() OR
-                guest_session_id::text = sender_id
-            )
+            AND user_id = auth.uid()
         )
     );
 
