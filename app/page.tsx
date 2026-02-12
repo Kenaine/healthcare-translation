@@ -1,26 +1,45 @@
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <h1 className="text-4xl font-bold text-center sm:text-left">
+    <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-gradient-to-b from-blue-50 to-white">
+      <main className="max-w-4xl mx-auto text-center space-y-8">
+        <h1 className="text-5xl font-bold text-gray-900">
           Healthcare Translation Bridge
         </h1>
-        <p className="text-center sm:text-left text-sm text-gray-600">
-          Real-time doctor-patient translation for healthcare consultations
+        
+        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          Real-time translation for healthcare consultations. 
+          Break down language barriers between doctors and patients.
         </p>
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="/auth/login"
-          >
-            Doctor Login
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="/auth/signup"
-          >
-            Doctor Signup
-          </a>
+
+        <div className="flex gap-4 justify-center mt-8">
+          <Link href="/auth/login">
+            <Button size="lg" className="text-lg px-8">
+              Login
+            </Button>
+          </Link>
+          <Link href="/auth/signup">
+            <Button size="lg" variant="outline" className="text-lg px-8">
+              Sign Up
+            </Button>
+          </Link>
+        </div>
+
+        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+          <div className="p-6 bg-white rounded-lg shadow-sm border">
+            <h3 className="text-lg font-semibold mb-2">For Doctors</h3>
+            <p className="text-gray-600">
+              Create consultations, manage conversations, and communicate with patients in any language.
+            </p>
+          </div>
+          <div className="p-6 bg-white rounded-lg shadow-sm border">
+            <h3 className="text-lg font-semibold mb-2">For Patients</h3>
+            <p className="text-gray-600">
+              Join consultations with your doctor and communicate in your preferred language.
+            </p>
+          </div>
         </div>
       </main>
     </div>
