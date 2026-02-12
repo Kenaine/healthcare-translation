@@ -5,7 +5,7 @@ import { getConversations } from '@/lib/conversations/actions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { logout } from '@/lib/auth/actions'
-import { MessageSquare, Plus, Users } from 'lucide-react'
+import { MessageSquare, Plus, Users, Search } from 'lucide-react'
 
 export default async function ConversationsPage() {
   const supabase = await createClient()
@@ -58,14 +58,22 @@ export default async function ConversationsPage() {
                 : 'View your consultations with doctors'}
             </p>
           </div>
-          {isDoctor && (
-            <Link href="/conversations/new">
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                New Conversation
+          <div className="flex gap-2">
+            <Link href="/search">
+              <Button variant="outline">
+                <Search className="mr-2 h-4 w-4" />
+                Search Conversations
               </Button>
             </Link>
-          )}
+            {isDoctor && (
+              <Link href="/conversations/new">
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Conversation
+                </Button>
+              </Link>
+            )}
+          </div>
         </div>
 
         {conversations.length === 0 ? (

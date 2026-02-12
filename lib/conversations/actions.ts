@@ -434,3 +434,77 @@ export async function deleteConversation(conversationId: string) {
   revalidatePath('/conversations')
   redirect('/conversations')
 }
+
+export async function searchMessages(query: string, conversationId?: string) {
+  const supabase = await createClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) {
+    return { results: [], error: 'Not authenticated' }
+  }
+
+  if (!query || query.trim().length === 0) {
+    return { results: [] }
+  }
+
+  // Get user's conversations for filtering
+  const { data: participants } = await supabase
+    .from('conversation_participants')
+    .select('conversation_id')
+    .eq('user_id', user.id)
+
+  if (!participants || participants.length === 0) {
+    return { results: [] }
+  }
+
+  const conversationIds = participants.map(p => p.conversation_id)
+
+  // Prepare search query (convert to tsquery format)
+  const searchQuery = query
+    .trim()
+    .split(/\s+/)
+    .filter(word => word.length > 0)
+    .join(' & ')
+
+  // Build the query
+  let searchQueryBuilder = supabase
+    .from('messages')
+    .select(`
+      id,
+      conversation_id,
+      sender_id,
+      sender_role,
+      original_text,
+      translated_text,
+      audio_url,
+      created_at,
+      conversations!inner (
+        id,
+        title,
+        doctor_language,
+        patient_language
+      )
+    `)
+    .in('conversation_id', conversationIds)
+    .textSearch('search_vector', searchQuery, {
+      type: 'websearch',
+      config: 'english'
+    })
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  // Filter by conversation if specified
+  if (conversationId) {
+    searchQueryBuilder = searchQueryBuilder.eq('conversation_id', conversationId)
+  }
+
+  const { data: results, error } = await searchQueryBuilder
+
+  if (error) {
+    console.error('Search error:', error)
+    return { results: [], error: 'Search failed' }
+  }
+
+  return { results: results || [] }
+}

@@ -5,7 +5,11 @@ import { createClient } from '@/lib/supabase/client'
 import { sendMessage, sendAudioMessage } from '@/lib/conversations/actions'
 import MessageList from '@/components/chat/MessageList'
 import MessageInput from '@/components/chat/MessageInput'
+import SearchBar from '@/components/search/SearchBar'
+import SearchResults from '@/components/search/SearchResults'
 import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { X } from 'lucide-react'
 
 type Message = {
   id: string
@@ -32,6 +36,9 @@ export default function ChatInterface({
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [isSubscribed, setIsSubscribed] = useState(false)
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isSearching, setIsSearching] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
   const lastMessageIdRef = useRef<string | null>(
@@ -162,20 +169,82 @@ export default function ChatInterface({
     // Real-time subscription will add the message to the list
   }
 
+  const handleSearchResults = (results: any[], query: string) => {
+    setSearchResults(results)
+    setSearchQuery(query)
+    setIsSearching(results.length > 0)
+  }
+
+  const clearSearch = () => {
+    setSearchResults([])
+    setSearchQuery('')
+    setIsSearching(false)
+  }
+
+  const handleJumpToMessage = (messageId: string) => {
+    // Clear search to show message list
+    clearSearch()
+    
+    // Wait for UI to update, then scroll to message
+    setTimeout(() => {
+      const messageElement = document.getElementById(`message-${messageId}`)
+      if (messageElement) {
+        messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        // Highlight the message briefly
+        messageElement.classList.add('ring-2', 'ring-primary', 'rounded-lg')
+        setTimeout(() => {
+          messageElement.classList.remove('ring-2', 'ring-primary', 'rounded-lg')
+        }, 2000)
+      }
+    }, 100)
+  }
+
   return (
     <Card className="h-[600px] flex flex-col">
       <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
-        <MessageList
-          messages={messages}
-          currentUserId={currentUserId}
-          currentUserRole={currentUserRole}
-        />
-        <div ref={messagesEndRef} />
-        <MessageInput
-          conversationId={conversationId}
-          onSendMessage={handleSendMessage}
-          onSendAudio={handleSendAudio}
-        />
+        {/* Search Bar */}
+        <div className="border-b p-3 bg-gray-50">
+          <SearchBar 
+            conversationId={conversationId} 
+            onResults={handleSearchResults}
+          />
+        </div>
+
+        {/* Search Results or Message List */}
+        {isSearching ? (
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold">Search Results</h3>
+              <Button variant="ghost" size="sm" onClick={clearSearch}>
+                <X className="w-4 h-4 mr-1" />
+                Clear
+              </Button>
+            </div>
+            <SearchResults 
+              results={searchResults} 
+              query={searchQuery}
+              onJump={handleJumpToMessage}
+            />
+          </div>
+        ) : (
+          <>
+            <MessageList
+              messages={messages}
+              currentUserId={currentUserId}
+              currentUserRole={currentUserRole}
+            />
+            <div ref={messagesEndRef} />
+          </>
+        )}
+
+        {/* Message Input */}
+        {!isSearching && (
+          <MessageInput
+            conversationId={conversationId}
+            onSendMessage={handleSendMessage}
+            onSendAudio={handleSendAudio}
+          />
+        )}
       </CardContent>
     </Card>
   )

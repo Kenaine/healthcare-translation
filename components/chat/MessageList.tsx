@@ -41,6 +41,7 @@ export default function MessageList({ messages, currentUserId, currentUserRole }
         return (
           <div
             key={message.id}
+            id={`message-${message.id}`}
             className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'}`}
           >
             {/* Message bubble */}
