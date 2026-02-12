@@ -14,10 +14,10 @@ export async function createConversation(formData: FormData) {
     return { error: 'Not authenticated' }
   }
 
-  // Check if user is a doctor
+  // Check if user is a doctor and get their language preference
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, language')
     .eq('id', user.id)
     .single()
 
@@ -35,8 +35,8 @@ export async function createConversation(formData: FormData) {
   }
 
   const title = formData.get('title') as string
-  const doctorLanguage = formData.get('doctor_language') as string
-  const patientLanguage = formData.get('patient_language') as string
+  const doctorLanguage = profile.language // Use doctor's profile language
+  const patientLanguage = profile.language // Default to same language, will be updated when patient joins
 
   console.log('Creating conversation:', { title, doctorLanguage, patientLanguage, userId: user.id })
 
@@ -47,7 +47,7 @@ export async function createConversation(formData: FormData) {
       creator_id: user.id,
       title: title || null,
       doctor_language: doctorLanguage,
-      patient_language: patientLanguage,
+      patient_language: patientLanguage, // Will be updated when patient joins
     })
     .select()
     .single()
@@ -137,16 +137,22 @@ export async function getConversation(conversationId: string) {
   }
 
   // Check if user is a participant
-  const { data: participant } = await supabase
+  const { data: participant, error: participantError } = await supabase
     .from('conversation_participants')
     .select('role')
     .eq('conversation_id', conversationId)
     .eq('user_id', user.id)
     .single()
 
-  if (!participant) {
-    return { conversation: null, error: 'Not authorized' }
+  if (participantError) {
+    console.error('Participant check error:', participantError)
   }
+
+  if (!participant) {
+    return { conversation: null, error: 'Not authorized to view this conversation' }
+  }
+
+  console.log('User role in conversation:', participant.role)
 
   const { data: conversation, error } = await supabase
     .from('conversations')
@@ -170,8 +176,17 @@ export async function getConversation(conversationId: string) {
     .single()
 
   if (error) {
-    console.error('Error fetching conversation:', error)
-    return { conversation: null, error: 'Conversation not found' }
+    console.error('Error fetching conversation details:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
+    })
+    return { conversation: null, error: `Failed to load conversation: ${error.message || 'Unknown error'}` }
+  }
+
+  if (!conversation) {
+    return { conversation: null, error: 'Conversation not found - might be an RLS policy issue' }
   }
 
   return { conversation, userRole: participant.role }
@@ -186,45 +201,103 @@ export async function joinConversation(conversationId: string) {
     return { error: 'Not authenticated' }
   }
 
-  // Check if conversation exists
-  const { data: conversation, error: convError } = await supabase
-    .from('conversations')
-    .select('id')
-    .eq('id', conversationId)
-    .single()
+  // Use SECURITY DEFINER function to bypass RLS and join conversation
+  const { data, error } = await supabase
+    .rpc('join_conversation_as_patient', {
+      conv_id: conversationId,
+      joining_user_id: user.id
+    })
 
-  if (convError || !conversation) {
-    return { error: 'Conversation not found' }
+  if (error) {
+    console.error('Join conversation error:', error)
+    return { error: 'Failed to join conversation' }
   }
 
-  // Check if already a participant
-  const { data: existing } = await supabase
+  // The function returns a jsonb object with success/error
+  if (data?.error) {
+    return { error: data.error }
+  }
+
+  revalidatePath(`/conversations/${conversationId}`)
+  return { success: true, message: data?.message }
+}
+
+export async function getMessages(conversationId: string) {
+  const supabase = await createClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) {
+    return { messages: [], error: 'Not authenticated' }
+  }
+
+  // Check if user is a participant
+  const { data: participant } = await supabase
     .from('conversation_participants')
     .select('id')
     .eq('conversation_id', conversationId)
     .eq('user_id', user.id)
     .single()
 
-  if (existing) {
-    return { success: true, message: 'Already joined' }
+  if (!participant) {
+    return { messages: [], error: 'Not authorized' }
   }
 
-  // Add as participant with patient role
-  const { error: participantError } = await supabase
+  const { data: messages, error } = await supabase
+    .from('messages')
+    .select('*')
+    .eq('conversation_id', conversationId)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching messages:', error)
+    return { messages: [], error: 'Failed to load messages' }
+  }
+
+  return { messages: messages || [] }
+}
+
+export async function sendMessage(conversationId: string, text: string) {
+  const supabase = await createClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) {
+    return { error: 'Not authenticated' }
+  }
+
+  // Get user's role in this conversation
+  const { data: participant } = await supabase
     .from('conversation_participants')
+    .select('role')
+    .eq('conversation_id', conversationId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (!participant) {
+    return { error: 'Not authorized' }
+  }
+
+  // Insert message
+  const { data: message, error } = await supabase
+    .from('messages')
     .insert({
       conversation_id: conversationId,
-      user_id: user.id,
-      role: 'patient',
+      sender_id: user.id,
+      sender_role: participant.role,
+      original_text: text,
+      translated_text: null, // Will be filled by translation service later
     })
+    .select()
+    .single()
 
-  if (participantError) {
-    console.error('Participant error:', participantError)
-    return { error: 'Failed to join conversation' }
+  if (error) {
+    console.error('Error sending message:', error)
+    return { error: 'Failed to send message' }
   }
 
   revalidatePath(`/conversations/${conversationId}`)
-  return { success: true }
+  return { success: true, message }
 }
 
 export async function deleteConversation(conversationId: string) {

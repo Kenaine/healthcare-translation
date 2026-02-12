@@ -143,6 +143,33 @@ export default function ProfilePage() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="language">Preferred Language</Label>
+                <select
+                  id="language"
+                  name="language"
+                  defaultValue={user.user_metadata.language || 'en'}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  required
+                >
+                  <option value="en">English</option>
+                  <option value="es">Spanish (Español)</option>
+                  <option value="fr">French (Français)</option>
+                  <option value="de">German (Deutsch)</option>
+                  <option value="it">Italian (Italiano)</option>
+                  <option value="pt">Portuguese (Português)</option>
+                  <option value="ru">Russian (Русский)</option>
+                  <option value="zh">Chinese (中文)</option>
+                  <option value="ja">Japanese (日本語)</option>
+                  <option value="ko">Korean (한국어)</option>
+                  <option value="ar">Arabic (العربية)</option>
+                  <option value="hi">Hindi (हिन्दी)</option>
+                  <option value="tl">Tagalog</option>
+                  <option value="vi">Vietnamese (Tiếng Việt)</option>
+                  <option value="th">Thai (ไทย)</option>
+                </select>
+              </div>
+
               <Button type="submit" disabled={loading}>
                 {loading ? 'Saving...' : 'Save Changes'}
               </Button>

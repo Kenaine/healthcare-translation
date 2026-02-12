@@ -1,10 +1,12 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { getConversation, deleteConversation } from '@/lib/conversations/actions'
+import { getConversation, getMessages, deleteConversation } from '@/lib/conversations/actions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ShareLink } from '@/components/conversations/ShareLink'
+import ChatInterface from '@/components/chat/ChatInterface'
+import ParticipantsList from '@/components/conversations/ParticipantsList'
 import { ArrowLeft, Trash2, Users } from 'lucide-react'
 
 export default async function ConversationDetailPage({
@@ -35,6 +37,9 @@ export default async function ConversationDetailPage({
   const isDoctor = profile?.role === 'doctor'
   const isCreator = conversation.creator_id === user.id
   const participants = conversation.conversation_participants || []
+
+  // Fetch messages
+  const { messages } = await getMessages(params.id)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -78,14 +83,12 @@ export default async function ConversationDetailPage({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Chat Area */}
           <div className="lg:col-span-2">
-            <Card className="h-[600px] flex flex-col">
-              <CardContent className="flex-1 p-6 flex items-center justify-center">
-                <div className="text-center text-gray-500">
-                  <p className="text-lg font-medium">Chat Interface</p>
-                  <p className="text-sm mt-2">Real-time messaging will be implemented in Phase 4</p>
-                </div>
-              </CardContent>
-            </Card>
+            <ChatInterface
+              conversationId={params.id}
+              initialMessages={messages}
+              currentUserId={user.id}
+              currentUserRole={userRole as 'doctor' | 'patient'}
+            />
           </div>
 
           {/* Sidebar */}
@@ -94,36 +97,12 @@ export default async function ConversationDetailPage({
             {isDoctor && <ShareLink conversationId={params.id} />}
 
             {/* Participants */}
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-4">Participants</h3>
-                <div className="space-y-3">
-                  {participants.map((participant: any) => (
-                    <div key={participant.user_id} className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-sm">
-                          {participant.profiles?.full_name || 'Unknown'}
-                        </p>
-                        <p className="text-xs text-gray-500 capitalize">
-                          {participant.role}
-                        </p>
-                      </div>
-                      {participant.user_id === user.id && (
-                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                          You
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                  
-                  {participants.length < 2 && (
-                    <div className="text-sm text-gray-500 italic">
-                      Waiting for patient to join...
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <ParticipantsList
+              conversationId={params.id}
+              initialParticipants={participants}
+              currentUserId={user.id}
+              isDoctor={isDoctor}
+            />
 
             {/* Conversation Info */}
             <Card>

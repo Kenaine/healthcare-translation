@@ -14,6 +14,7 @@ export async function signup(formData: FormData) {
       data: {
         full_name: formData.get('full_name') as string,
         role: formData.get('role') as string,
+        language: formData.get('language') as string,
       },
     },
   }
@@ -94,13 +95,25 @@ export async function updateProfile(formData: FormData) {
   }
 
   const full_name = formData.get('full_name') as string
+  const language = formData.get('language') as string
 
-  const { error } = await supabase.auth.updateUser({
-    data: { full_name }
+  // Update auth user metadata
+  const { error: authError } = await supabase.auth.updateUser({
+    data: { full_name, language }
   })
 
-  if (error) {
-    return { error: error.message }
+  if (authError) {
+    return { error: authError.message }
+  }
+
+  // Update profiles table
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({ full_name, language })
+    .eq('id', user.id)
+
+  if (profileError) {
+    return { error: profileError.message }
   }
 
   revalidatePath('/profile')

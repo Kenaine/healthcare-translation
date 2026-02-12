@@ -6,56 +6,21 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createConversation } from '@/lib/conversations/actions'
 import { ArrowLeft } from 'lucide-react'
-
-const LANGUAGES = [
-  { code: 'en', name: 'English' },
-  { code: 'es', name: 'Spanish' },
-  { code: 'fr', name: 'French' },
-  { code: 'de', name: 'German' },
-  { code: 'it', name: 'Italian' },
-  { code: 'pt', name: 'Portuguese' },
-  { code: 'ru', name: 'Russian' },
-  { code: 'zh', name: 'Chinese' },
-  { code: 'ja', name: 'Japanese' },
-  { code: 'ko', name: 'Korean' },
-  { code: 'ar', name: 'Arabic' },
-  { code: 'hi', name: 'Hindi' },
-  { code: 'tl', name: 'Tagalog' },
-  { code: 'vi', name: 'Vietnamese' },
-  { code: 'th', name: 'Thai' },
-]
 
 export default function NewConversationPage() {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [doctorLanguage, setDoctorLanguage] = useState<string>('')
-  const [patientLanguage, setPatientLanguage] = useState<string>('')
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
     setLoading(true)
 
-    if (!doctorLanguage || !patientLanguage) {
-      setError('Please select both languages')
-      setLoading(false)
-      return
-    }
-
-    if (doctorLanguage === patientLanguage) {
-      setError('Please select different languages')
-      setLoading(false)
-      return
-    }
-
     const formData = new FormData(event.currentTarget)
-    formData.append('doctor_language', doctorLanguage)
-    formData.append('patient_language', patientLanguage)
     
     const result = await createConversation(formData)
     
@@ -84,7 +49,7 @@ export default function NewConversationPage() {
           <CardHeader>
             <CardTitle className="text-2xl">Create New Conversation</CardTitle>
             <CardDescription>
-              Set up a new consultation with language translation
+              Set up a new consultation. Your language will be used automatically from your profile.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -108,57 +73,22 @@ export default function NewConversationPage() {
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="doctor_language">Your Language (Doctor)</Label>
-                <Select value={doctorLanguage} onValueChange={setDoctorLanguage}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LANGUAGES.map((lang) => (
-                      <SelectItem key={lang.code} value={lang.code}>
-                        {lang.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded">
+                <p className="text-sm font-medium">Language Setup</p>
+                <p className="text-sm mt-1">
+                  Your preferred language from your profile will be used. The patient's language will be set when they join the conversation.
+                </p>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="patient_language">Patient's Language</Label>
-                <Select value={patientLanguage} onValueChange={setPatientLanguage}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select patient's language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LANGUAGES.map((lang) => (
-                      <SelectItem key={lang.code} value={lang.code}>
-                        {lang.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {doctorLanguage && patientLanguage && doctorLanguage !== patientLanguage && (
-                <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded">
-                  <p className="text-sm font-medium">Translation Setup</p>
-                  <p className="text-sm mt-1">
-                    Messages will be translated between {LANGUAGES.find(l => l.code === doctorLanguage)?.name} and{' '}
-                    {LANGUAGES.find(l => l.code === patientLanguage)?.name}
-                  </p>
-                </div>
-              )}
 
               <div className="flex gap-4">
-                <Button type="submit" className="flex-1" disabled={loading}>
-                  {loading ? 'Creating...' : 'Create Conversation'}
-                </Button>
                 <Link href="/dashboard" className="flex-1">
                   <Button type="button" variant="outline" className="w-full">
                     Cancel
                   </Button>
                 </Link>
+                <Button type="submit" className="flex-1" disabled={loading}>
+                  {loading ? 'Creating...' : 'Create Conversation'}
+                </Button>
               </div>
             </form>
           </CardContent>
